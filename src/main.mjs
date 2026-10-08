@@ -47,6 +47,7 @@ function attachOwner() {
 }
 async function setupUi() {
   const commands = [ ['menu', 'Main menu'], ['chats', 'Select chat'], ['usage', 'Usage and reset credits'], ['status', 'Codex status'], ['history', 'Recent replies'], ['batch', 'New bundle'], ['pending', 'Message bundle'], ['send', 'Send bundle'], ['answer', 'Answer question'], ['stop', 'Stop task'], ['help', 'Help'] ].map(([command, description]) => ({ command, description }));
+  commands.push(...[['last', 'Latest message'], ['newchat', 'New chat'], ['projects', 'Projects'], ['newproject', 'New project'], ['models', 'Choose model and reasoning'], ['compat', 'Compatibility and Whisper']].map(([command, description]) => ({ command, description })));
   await tg.call('setMyCommands', { scope: { type: 'chat', chat_id: settings.ownerId }, commands });
   await tg.call('setChatMenuButton', { chat_id: settings.ownerId, menu_button: { type: 'commands' } });
   if (settings.uiRevision !== UI_REVISION || settings.uiEdition !== UI_EDITION) {
@@ -97,6 +98,7 @@ try {
           await tg.call('answerCallbackQuery', { callback_query_id: update.callback_query.id });
           const data = update.callback_query.data || '';
           if (data.startsWith('u:')) await ui.callback(data);
+          else if (data.startsWith('f:')) await ui.features.callback(data);
           else if (data.startsWith('r:')) await ui.quota.callback(data);
           else if (data.startsWith('b:')) await inbox.callback(data);
           else await bridge.callback(data);
