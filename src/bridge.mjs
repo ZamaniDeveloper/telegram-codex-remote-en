@@ -44,7 +44,7 @@ export class Bridge {
   async chats(search = '', offset = 0) {
     const rows = await this.catalog(search, 10, offset);
     const keyboard = rows.map(row => [{ text: (row.title || row.cwd || row.id).slice(0, 64),
-      callback_data: `c:${this.action({ type: 'chat', row })}` }]);
+      callback_data: `c:${this.action({ type: 'chat', row })}` }, ...(this.latestButton ? [this.latestButton(row)] : [])]);
     if (rows.length === 10) keyboard.push([{ text: 'More chats',
       callback_data: `p:${this.action({ type: 'page', search, offset: offset + 10 })}` }]);
     keyboard.push([button('🔎 Search', 'u:search'), button('🏠 Main menu', 'u:home')]);
