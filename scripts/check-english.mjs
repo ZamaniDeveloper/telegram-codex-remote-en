@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const directories = new Set(['src', 'test', 'deploy', 'scripts', 'docs', '.github', 'assets']);
-const textFile = name => /\.(?:mjs|cjs|ps1|json|md|ya?ml|cff)$/.test(name) || ['LICENSE', '.env.example', '.connector.env.example'].includes(name);
+const textFile = name => /\.(?:mjs|cjs|ps1|py|txt|json|md|ya?ml|cff)$/.test(name) || ['LICENSE', '.env.example', '.connector.env.example'].includes(name);
 let checked = 0;
 async function scan(directory, top = false) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -19,3 +19,4 @@ async function scan(directory, top = false) {
 }
 await scan(root, true);
 console.log(`English edition check passed (${checked} source, script and documentation files).`);
+
