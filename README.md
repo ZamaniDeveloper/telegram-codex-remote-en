@@ -1,0 +1,118 @@
+<p align="center"><img src="assets/telecodex-logo.jpg" alt="TeleCodex — Telegram + Codex" width="680"></p>
+
+# TeleCodex — English edition
+
+**Control existing Windows Codex desktop chats from Telegram.**
+
+[Persian edition](https://github.com/ZamaniDeveloper/telegram-codex-remote) · [Installation](docs/INSTALL.en.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md) · [License](LICENSE)
+
+This repository installs the **English bot**. All built-in menus, messages,
+errors, installers and documentation are English. Both the server bot and the
+Windows connector are included. Use this edition at both ends.
+
+Built-in bot text is English. Chat titles, forwarded content and Codex-generated
+answers preserve the language of the original chat; write your requests in English
+when you want Codex to answer in English.
+
+![CI](https://github.com/ZamaniDeveloper/telegram-codex-remote-en/actions/workflows/ci.yml/badge.svg)
+
+Developed by **Mohsen Zamani / [ZamaniDeveloper](https://github.com/ZamaniDeveloper)**.
+Both the Telegram server bot and the Windows connector, installer and startup
+scripts are included. Production credentials, attachments and private chat history
+are excluded.
+
+## Features
+
+- English native menus, formatted live replies, code blocks and links.
+- Existing-chat selection/search, history, interrupt and active-turn steering.
+- Bound question answers through buttons, free text and Telegram Reply.
+- Many forwarded messages, original files, captions and images in one request.
+- Current-account quota windows, UTC reset times and earned reset credits.
+- Confirmed credit consumption and a durable request ID for uncertain resets.
+- Windows logon startup, supervised reconnection and a pinned reverse SSH tunnel.
+- Local or Linux-server deployment; one paired owner and confined RPC.
+
+The bot delegates work to the existing desktop thread owner. It does not start
+an independent agent to resume the chat or modify Codex's local database.
+
+## Quick start: local Windows mode
+
+Requirements: Node.js 24.17.0+, PowerShell 7.3+, and a running, signed-in Windows
+Codex desktop. There are no third-party runtime npm dependencies.
+
+```powershell
+git clone https://github.com/ZamaniDeveloper/telegram-codex-remote-en.git
+cd telegram-codex-remote-en
+npm ci --ignore-scripts
+.\setup.ps1
+npm start
+```
+
+Create a bot with [BotFather](https://t.me/BotFather), enter its token at the hidden
+prompt, and send the displayed `/pair ...` code privately. Pairing expires after
+ten minutes. Select a chat using `/chats` and send a message.
+
+## Server bot + Windows connector
+
+Follow [the full installation guide](docs/INSTALL.en.md). On Windows:
+
+```powershell
+.\setup-connector.ps1 -SshHost server.example.com -SshUser codexbridge
+# Finish server configuration and install the restricted public key, then:
+.\install-windows.ps1
+```
+
+The bot runs on Linux; the connector runs after Windows logon. Both HTTP endpoints
+bind to loopback and communicate through reverse SSH. The PC must stay online.
+Do not run a second Telegram poller on Windows in server mode.
+
+| Component | Entrypoint |
+|---|---|
+| Telegram bot | `src/main.mjs` |
+| Supervised connector | `src/connector-supervisor.mjs` |
+| Connector setup / installer | `setup-connector.ps1` / `install-windows.ps1` |
+| Logon startup / removal | `install-autostart.ps1` / `uninstall-autostart.ps1` |
+| Portable server configuration | `deploy/pm2.config.cjs` |
+
+## Commands
+
+`/menu`, `/chats`, `/find text`, `/status`, `/history`, `/steer [text]`, `/stop`,
+`/answer text`, `/batch`, `/pending`, `/send [instructions]`, `/cancel`, `/usage`.
+Native buttons cover common flows. Forwarded commands are reference content,
+never executed as control commands. Question Replies target their original chat.
+
+Limits: 20 MB per file, 100 messages, 100 MB of attachments and 100,000 text
+characters per bundle. Audio/video interpretation requires tools in the chat.
+Automatic speech transcription is not provided.
+
+## Verification
+
+```sh
+npm ci --ignore-scripts
+npm run verify
+```
+
+CI runs isolated tests on Windows and Linux and parses PowerShell scripts. It does
+not sign into Codex, install startup tasks, contact a real bot or consume reset
+credits. `npm run doctor` reads a local catalog/snapshot without sending model
+input; supply an open thread ID if the newest chat is closed.
+
+The private desktop protocol was inspected against Windows build `26.1002.7124.0`;
+verify compatibility after updating Codex. This independent project does not
+implement the full official Remote feature set. New project/chat creation, model
+switching, multiple accounts, cloud Work chats and voice input are outside this release.
+
+## Copyright and attribution
+
+Copyright © 2026 **Mohsen Zamani / ZamaniDeveloper**. Install and use under the
+[custom source-available attribution license](LICENSE). Republishing without the
+original developer credit, source URL and full license is prohibited. Credits must
+remain in redistributed versions; modified releases must identify their changes
+and must not impersonate the original developer.
+
+Public GitHub repositories remain viewable and forkable under
+[GitHub's platform terms](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+This is not an MIT-licensed project. OpenAI and Telegram retain their trademarks;
+no endorsement is implied.
+
+[Security](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Design](docs/ARCHITECTURE.md)

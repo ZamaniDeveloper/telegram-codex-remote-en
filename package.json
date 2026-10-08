@@ -1,0 +1,30 @@
+{
+  "name": "telegram-codex-desktop-remote-en",
+  "private": true,
+  "type": "module",
+  "version": "0.6.0",
+  "edition": "en",
+  "description": "English Telegram remote for existing Codex desktop chats, with a Windows connector and private SSH transport.",
+  "author": "Mohsen Zamani (ZamaniDeveloper)",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZamaniDeveloper/telegram-codex-remote-en.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ZamaniDeveloper/telegram-codex-remote-en/issues"
+  },
+  "homepage": "https://github.com/ZamaniDeveloper/telegram-codex-remote-en#readme",
+  "engines": {
+    "node": ">=24.17.0"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/main.mjs",
+    "doctor": "node src/doctor.mjs",
+    "connector": "node --env-file=.connector.env src/connector-supervisor.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/check.mjs && node scripts/check-english.mjs",
+    "check:publish": "node scripts/check-publication.mjs",
+    "verify": "npm run check && npm test"
+  }
+}
