@@ -29,6 +29,7 @@ function save() { writeFileSync(stateFile + '.tmp', JSON.stringify(settings, nul
 const tg = new Telegram(token); let running = true, bridge = null, inbox = null, ui = null, flushTimer, restoreSelection = null, lastRestore = 0;
 function stop() {
   running = false; clearInterval(flushTimer);
+  ui?.accounts.close().catch(() => {});
   try { bridge?.close(); } catch {}
   releaseLock();
 }
@@ -51,6 +52,7 @@ function attachOwner() {
 async function setupUi() {
   const commands = [ ['menu', 'Main menu'], ['chats', 'Select chat'], ['usage', 'Usage and reset credits'], ['status', 'Codex status'], ['history', 'Recent replies'], ['batch', 'New bundle'], ['pending', 'Group message sending'], ['queue', 'Send queue'], ['send', 'Send bundle'], ['answer', 'Answer question'], ['stop', 'Stop task'], ['help', 'Help'] ].map(([command, description]) => ({ command, description }));
   commands.push(...[['last', 'Latest message of each chat'], ['newchat', 'New chat'], ['projects', 'Projects'], ['newproject', 'New project'], ['models', 'Choose model and reasoning'], ['compat', 'Compatibility and Whisper']].map(([command, description]) => ({ command, description })));
+  commands.push({ command: 'accounts', description: 'Codex accounts and account switching' });
   await tg.call('setMyCommands', { scope: { type: 'chat', chat_id: settings.ownerId }, commands });
   await tg.call('setChatMenuButton', { chat_id: settings.ownerId, menu_button: { type: 'commands' } });
   if (settings.uiRevision !== UI_REVISION || settings.uiEdition !== UI_EDITION) {
@@ -78,6 +80,7 @@ try {
       }
       await bridge.flush();
       await bridge.outbox.follow(bridge); await bridge.outbox.flush(bridge);
+      await ui.accounts.poll();
     }
     catch { /* Retry connection/stream sync, never resend a user action. */ }
     finally { flushing = false; }

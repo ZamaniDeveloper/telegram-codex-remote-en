@@ -6,17 +6,19 @@ import path from 'node:path';
 import { QuotaUi } from './quota-ui.mjs';
 import { Features, featureRows, featureMenuRows, ROUTES as FEATURE_ROUTES } from './features.mjs';
 import { text as T } from './feature-text.mjs';
+import { AccountUi } from './account-ui.mjs';
 
-export const UI_REVISION = 8;
+export const UI_REVISION = 9;
 export const UI_EDITION = 'en';
 export const LABELS = {
   chats: '💬 Chats', search: '🔎 Search', status: '📊 Status', history: '🗂 Recent replies',
   bundle: '📦 Group message sending', questions: '❓ Questions for Codex', home: '🏠 Main menu', help: 'ℹ️ Help',
   usage: '📈 Usage', queue: '⏳ Send queue',
+  accounts: '👤 Accounts',
 };
 export function button(text, callback_data, style) { return { text, callback_data, ...(style ? { style } : {}) }; }
 export function mainKeyboard() {
-  return { keyboard: [[LABELS.chats, LABELS.search], ...featureRows(), [LABELS.status, LABELS.history], [LABELS.bundle, LABELS.questions], [LABELS.usage, LABELS.help], [LABELS.queue], [LABELS.home]].map(row => row.map(text => ({ text }))),
+  return { keyboard: [[LABELS.chats, LABELS.search], ...featureRows(), [LABELS.status, LABELS.history], [LABELS.bundle, LABELS.questions], [LABELS.usage, LABELS.accounts], [LABELS.queue, LABELS.help], [LABELS.home]].map(row => row.map(text => ({ text }))),
     resize_keyboard: true, is_persistent: true, input_field_placeholder: 'Write a message or use the buttons' };
 }
 export function mainInlineKeyboard() {
@@ -26,7 +28,7 @@ export function mainInlineKeyboard() {
     [button(LABELS.status, 'u:status'), button(LABELS.history, 'u:history')],
     [button(LABELS.bundle, 'u:bundle'), button(LABELS.questions, 'u:questions')],
     [button(LABELS.queue, 'u:queue'), button(LABELS.usage, 'u:usage')],
-    [button(LABELS.help, 'u:help')],
+    [button(LABELS.accounts, 'u:accounts', 'primary'), button(LABELS.help, 'u:help')],
   ] };
 }
 export function navKeyboard() { return { inline_keyboard: [[button('💬 Chats', 'u:chats', 'primary'), button('🏠 Main menu', 'u:home')]] }; }
@@ -35,14 +37,14 @@ export function chatKeyboard(threadId) {
     [button('📊 Status', 'u:status'), button('🗂 Recent replies', 'u:history')],
     [button(T.last, threadId ? `u:last:${threadId}` : 'u:last'), button(LABELS.queue, 'u:queue')],
     [button(LABELS.bundle, 'u:bundle'), button('❓ Questions', 'u:questions', 'primary')],
-    [button('📈 Usage and reset credits', 'u:usage', 'primary')],
+    [button('📈 Usage and reset credits', 'u:usage', 'primary'), button(LABELS.accounts, 'u:accounts')],
     [button('✍️ Guide task', 'u:steer'), button('⏹ Stop', 'u:stop', 'danger')],
     [button('💬 Change chat', 'u:chats'), button('🏠 Main menu', 'u:home')],
   ] };
 }
 export class BotUi {
   input = null; replies = new Map();
-  constructor(bridge, inbox) { this.bridge = bridge; this.inbox = inbox; this.tg = bridge.tg; this.chatId = bridge.chatId; this.quota = new QuotaUi(bridge, { stateFile: path.join(inbox.root, 'quota-reset.json') }); this.features = new Features(this); this.bridge.latestButton = row => button('🕘', this.features.action({ kind: 'last', row, offset: 0 })); }
+  constructor(bridge, inbox) { this.bridge = bridge; this.inbox = inbox; this.tg = bridge.tg; this.chatId = bridge.chatId; this.quota = new QuotaUi(bridge, { stateFile: path.join(inbox.root, 'quota-reset.json') }); this.accounts = new AccountUi(bridge); this.features = new Features(this); this.bridge.latestButton = row => button('🕘', this.features.action({ kind: 'last', row, offset: 0 })); }
   cancelInput() { if (this.input) this.input.used = true; this.input = null; }
   async home(updated = false) {
     this.cancelInput(); this.features.cancelInput(); const w = this.bridge.selected;
@@ -87,6 +89,7 @@ export class BotUi {
     if (route === 'last-list') return this.features.route('last');
     if (FEATURE_ROUTES.includes(route) && route !== 'last') return this.features.route(route);
     if (route === 'usage') return this.quota.show();
+    if (route === 'accounts') return this.accounts.show();
     if (route === 'queue') {
       if (!this.bridge.outbox) throw Error('Send queue is unavailable.');
       return this.bridge.outbox.show(this.bridge);
@@ -116,7 +119,7 @@ export class BotUi {
       return this.features.showLast(this.bridge.watched.get(last[1]) || { id: last[1] });
     }
     const route = data.slice(2);
-    if (!['home', 'help', 'chats', 'last', 'last-list', 'queue', 'search', 'status', 'history', 'stop', 'questions', 'bundle', 'batch', 'instruction', 'steer', 'usage', ...FEATURE_ROUTES].includes(route)) throw Error('Invalid button.');
+    if (!['home', 'help', 'chats', 'last', 'last-list', 'queue', 'search', 'status', 'history', 'stop', 'questions', 'bundle', 'batch', 'instruction', 'steer', 'usage', 'accounts', ...FEATURE_ROUTES].includes(route)) throw Error('Invalid button.');
     return this.route(route);
   }
   async consumePrompt(input, text) {
@@ -135,6 +138,7 @@ export class BotUi {
       if (['📦 Message bundles', '📦 Message bundle'].includes(message.text.trim())) return this.route('bundle');
       if (/^\/queue(?:@\w+)?\s*$/.test(message.text.trim())) return this.route('queue');
       if (/^\/(usage|quota)(?:@\w+)?\s*$/.test(message.text.trim())) return this.route('usage');
+      if (/^\/accounts(?:@\w+)?\s*$/.test(message.text.trim())) return this.route('accounts');
       if (/^\/(start|menu|home|help)(?:@\w+)?\s*$/.test(message.text.trim())) return this.route(message.text.trim().startsWith('/help') ? 'help' : 'home');
       if (await this.features.message(message)) return;
       const steer = /^\/steer(?:@\w+)?(?:\s+([\s\S]*))?$/.exec(message.text.trim());
