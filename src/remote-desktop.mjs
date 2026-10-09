@@ -13,7 +13,7 @@ export class RemoteDesktop extends EventEmitter {
     let response;
     try { response = await fetch(this.url + '/rpc', { method: 'POST', headers: {
       authorization: `Bearer ${this.secret}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ method, args }), signal: AbortSignal.timeout(method === 'transcribeAttachment' ? 660000 : ['models', 'projects', 'createChat', 'latestMessage', 'accountActivate'].includes(method) ? 180000 : ['request', 'quotaRead', 'quotaReset', 'accountsRead', 'accountLoginStart'].includes(method) ? 65000 : 25000) }); }
+      body: JSON.stringify({ method, args }), signal: AbortSignal.timeout(method === 'transcribeAttachment' ? 660000 : method === 'accountActivate' ? 300000 : ['models', 'projects', 'createChat', 'latestMessage'].includes(method) ? 180000 : ['request', 'quotaRead', 'quotaReset', 'accountsRead', 'accountLoginStart'].includes(method) ? 65000 : 25000) }); }
     catch { throw Error('The Windows connector is unavailable; Codex and the local connector must be running. The request was not retried automatically.'); }
     const body = await response.json();
     if (!response.ok || body.error) throw Error(body.error || 'Connector request failed');

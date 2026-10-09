@@ -1,5 +1,8 @@
 // Copyright (c) 2026 Mohsen Zamani / ZamaniDeveloper. See LICENSE.
 export const text = {
+  recovery: 'Reconnection after switching was not verified. Inspect Codex and the active account on Windows, then refresh Accounts. The previous request was not replayed.',
+  startFailedRecovered: 'Codex did not reconnect in time. The previous account and local projects were verified after recovery. Refresh Accounts once the desktop is ready.',
+  inspectPreviousAttempt: 'This request already has an uncertain or failed outcome. Check the active account and refresh Accounts. The previous request was not replayed.',
   title: '👤 Codex accounts', current: 'Active account', none: 'Not signed in', add: '➕ Add account', refresh: '🔄 Refresh', home: '🏠 Main menu',
   choose: 'Choose the destination account. Local projects and files stay on the same Windows computer.',
   footer: 'Logins are stored only on Windows, encrypted for the same Windows user.',
