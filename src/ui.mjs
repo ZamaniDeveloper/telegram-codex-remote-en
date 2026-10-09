@@ -5,6 +5,7 @@ import { lastTurn, turnId } from './state.mjs';
 import path from 'node:path';
 import { QuotaUi } from './quota-ui.mjs';
 import { Features, featureRows } from './features.mjs';
+import { text as T } from './feature-text.mjs';
 
 export const UI_REVISION = 6;
 export const UI_EDITION = 'en';
@@ -19,9 +20,10 @@ export function mainKeyboard() {
     resize_keyboard: true, is_persistent: true, input_field_placeholder: 'Write a message or use the buttons' };
 }
 export function navKeyboard() { return { inline_keyboard: [[button('💬 Chats', 'u:chats', 'primary'), button('🏠 Main menu', 'u:home')]] }; }
-export function chatKeyboard() {
+export function chatKeyboard(threadId) {
   return { inline_keyboard: [
     [button('📊 Status', 'u:status'), button('🗂 Recent replies', 'u:history')],
+    [button(T.last, threadId ? `u:last:${threadId}` : 'u:last')],
     [button('📦 Message bundles', 'u:bundle'), button('❓ Questions', 'u:questions', 'primary')],
     [button('📈 Usage and reset credits', 'u:usage', 'primary')],
     [button('✍️ Guide task', 'u:steer'), button('⏹ Stop', 'u:stop', 'danger')],
@@ -73,6 +75,7 @@ export class BotUi {
     if (route === 'help') return this.help();
     if (route === 'usage') return this.quota.show();
     if (route === 'chats') return this.bridge.chats();
+    if (route === 'last') return this.features.showLast(this.bridge.selected || this.bridge.requireSelected());
     if (route === 'search') return this.prompt('search');
     if (route === 'status' || route === 'history' || route === 'stop') return this.bridge.text('/' + route);
     if (route === 'questions') return this.bridge.questions.show();
@@ -90,8 +93,13 @@ export class BotUi {
     throw Error('Invalid button; open the main menu.');
   }
   async callback(data) {
+    const last = /^u:last:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(data);
+    if (last) {
+      this.cancelInput(); this.features.cancelInput();
+      return this.features.showLast(this.bridge.watched.get(last[1]) || { id: last[1] });
+    }
     const route = data.slice(2);
-    if (!['home', 'help', 'chats', 'search', 'status', 'history', 'stop', 'questions', 'bundle', 'batch', 'instruction', 'steer', 'usage'].includes(route)) throw Error('Invalid button.');
+    if (!['home', 'help', 'chats', 'last', 'search', 'status', 'history', 'stop', 'questions', 'bundle', 'batch', 'instruction', 'steer', 'usage'].includes(route)) throw Error('Invalid button.');
     return this.route(route);
   }
   async consumePrompt(input, text) {

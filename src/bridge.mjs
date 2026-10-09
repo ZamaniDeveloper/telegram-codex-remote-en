@@ -92,7 +92,7 @@ export class Bridge {
     if (row.title) w.title = row.title;
     this.selected = w;
     this.onSelected?.(row);
-    if (notify) await this.tg.send(this.chatId, card('✅ Chat selected', concatRich(styled(row.title || 'Codex'), '\n\n📁 Project: ', w.state.cwd || 'No project', '\n🧠 Model: ', w.state.latestModel || 'Default'), 'Your next message goes to this chat.'), chatKeyboard());
+    if (notify) await this.tg.send(this.chatId, card('✅ Chat selected', concatRich(styled(row.title || 'Codex'), '\n\n📁 Project: ', w.state.cwd || 'No project', '\n🧠 Model: ', w.state.latestModel || 'Default'), 'Your next message goes to this chat.'), chatKeyboard(w.id));
   }
   waitSnapshot(w) {
     return new Promise((resolve, reject) => {
@@ -143,7 +143,7 @@ export class Bridge {
       const w = this.requireSelected(); const turn = lastTurn(w.state);
       if (command === 'status') return this.tg.send(this.chatId, card('📊 Codex status', concatRich(styled(w.title || 'Chat'), '\n\n',
         '⚡ Status: ', turn?.status === 'inProgress' ? 'Working' : 'Ready', '\n🧠 Model: ', w.state.latestModel || 'Default', '\n📁 Project: ', w.state.cwd || 'No project',
-        '\n❓ Open questions: ', String(this.questions.eligible().filter(s => s.threadId === w.id).length), '\n🔐 Approval requests: ', String(pendingRequests(w.state).filter(r => r.method.endsWith('requestApproval')).length))), chatKeyboard());
+        '\n❓ Open questions: ', String(this.questions.eligible().filter(s => s.threadId === w.id).length), '\n🔐 Approval requests: ', String(pendingRequests(w.state).filter(r => r.method.endsWith('requestApproval')).length))), chatKeyboard(w.id));
       if (command === 'history') {
         const turns = turnsOf(w.state).slice(-3).filter(t => assistantText(t));
         if (!turns.length) return this.tg.send(this.chatId, card('🗂 Recent replies', 'No replies in the loaded history.'), navKeyboard());
@@ -156,7 +156,7 @@ export class Bridge {
       throw Error('Unknown command. /help');
     }
     await this.sendInput([{ type: 'text', text }]);
-    return this.tg.send(this.chatId, card('📨 Message sent', `Codex in chat «${this.selected.title || 'Chat'}» received your request.`), chatKeyboard());
+    return this.tg.send(this.chatId, card('📨 Message sent', `Codex in chat «${this.selected.title || 'Chat'}» received your request.`), chatKeyboard(this.selected.id));
   }
   readyToSend(expectedThreadId) {
     const w = this.requireSelected();
