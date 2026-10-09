@@ -120,7 +120,7 @@ export class Inbox {
   description(draft) {
     const attachments = draft.items.filter(i => i.attachment);
     const preview = draft.items.slice(-5).map((i, n) => `${draft.items.length - Math.min(5, draft.items.length) + n + 1}. ${i.attachment?.name || i.text.replace(/[\r\n]/g, ' ').slice(0, 90)}${i.audio ? '\n🎙 ' + (i.transcript ? i.transcript.slice(0, 500) : i.transcriptionError || 'Whisper: transcribing locally...') : ''}`).join('\n');
-    return card('📦 Message bundle', concatRich(styled('💬 Chat: '), draft.title || 'Not selected yet', '\n', styled(`${draft.items.length} messages · ${attachments.length} attachments`),
+    return card('📦 Group message sending', concatRich(styled('💬 Chat: '), draft.title || 'Not selected yet', '\n', styled(`${draft.items.length} messages · ${attachments.length} attachments`),
       preview ? '\n\n' + preview : '\n\nSend or forward text and attachments.'), draft.status === 'uncertain' ? '⚠️ Previous delivery is uncertain; check the Codex chat.' : 'Add more messages, then use the buttons to send everything together.');
   }
   async notice(force = false) {
@@ -180,7 +180,7 @@ export class Inbox {
     const draft = this.current;
     if (!draft?.items.length) throw Error('This bundle is empty; send text, an image or a file first.');
     if (draft.status !== 'ready') throw Error('Previous delivery is uncertain; check the Codex chat. Use /cancel to discard this bundle.');
-    const selected = this.bridge.readyToSend(draft.threadId);
+    const selected = this.bridge.readyToSubmit ? this.bridge.readyToSubmit(draft.threadId) : this.bridge.readyToSend(draft.threadId);
     if (!draft.threadId) { draft.threadId = selected.id; draft.title = selected.title; }
     const audios = draft.items.filter(item => item.audio && !item.transcript);
     if (audios.length) {
@@ -196,13 +196,18 @@ export class Inbox {
         const a = item.attachment;
         files.set(a.id, await this.transfer({ ...a, batchId: draft.id }, a.cachePath));
       }
-      this.bridge.readyToSend(draft.threadId);
+      this.bridge.readyToSubmit ? this.bridge.readyToSubmit(draft.threadId) : this.bridge.readyToSend(draft.threadId);
     } catch (e) { draft.status = 'ready'; this.save(); throw e; }
     const input = bundleInput(draft, files, instruction);
     draft.status = 'sending'; this.save();
-    try { await this.bridge.sendInput(input, draft.threadId, draft.clientMessageId); }
-    catch { draft.status = 'uncertain'; this.save(); throw Error('Bundle delivery is uncertain. First check the chat in Codex to verify delivery; the request was not retried automatically. /pending'); }
+    let result;
+    try { result = await this.bridge.sendInput(input, draft.threadId, draft.clientMessageId); }
+    catch (error) {
+      if (error.notDispatched) { draft.status = 'ready'; this.save(); throw error; }
+      draft.status = 'uncertain'; this.save(); throw Error('Bundle delivery is uncertain. First check the chat in Codex to verify delivery; the request was not retried automatically. /pending');
+    }
     this.current = null; this.dirty = false; this.save(); await this.cleanup(draft);
+    if (result?.queued) return this.bridge.outbox.notice(this.bridge, result.entry);
     return this.tg.send(this.chatId, card('✅ Bundle sent', `${draft.items.length} messages and ${files.size} attachments sent together to chat «${draft.title}» successfully.`), { inline_keyboard: [[{ text: '🏠 Main menu', callback_data: 'u:home' }]] });
   }
 }

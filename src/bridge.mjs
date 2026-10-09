@@ -7,8 +7,10 @@ import { applyPatches, lastTurn, assistantText, pendingRequests, turnId, turnsOf
 import { card, concatRich, styled, splitRich, turnCard } from './format.mjs';
 import { chatKeyboard, navKeyboard, button } from './ui.mjs';
 import { QuestionManager } from './questions.mjs';
+import { isBusy } from './outbox.mjs';
+import { text as OUTBOX } from './outbox-text.mjs';
 
-const HELP = `TeleCodex — Codex Desktop Remote\n\n/chats — Select an existing chat\n/find query — Search chats and project paths\n/status — Status and model\n/history — Recent replies\n/stop — Stop this chat\'s active task\n/steer text — Guide the active task\n/answer text — Answer an open question\n/batch — Collect messages in one bundle\n/pending — Show bundle and attachments\n/send optional instructions — Send the whole bundle as one request\n/cancel — Discard the unsent bundle\n/help — Help\n\nForwarded messages, files and images are collected in a bundle. Direct text is added while a bundle is open. Send it with /send command. Original images are sent to Codex with the request. Each file may be up to 20 MB.\n\nAfter selecting a chat, direct messages without an open bundle are sent to that chat. During an active task, use /steer to guide it. Closed chats are opened in Codex when selected.`;
+const HELP = `TeleCodex — Codex Desktop Remote\n\n/chats — Select an existing chat\n/find query — Search chats and project paths\n/status — Status and model\n/history — Recent replies\n/stop — Stop this chat\'s active task\n/steer text — Guide the active task\n/answer text — Answer an open question\n/batch — Collect messages in one bundle\n/pending — Show bundle and attachments\n/send optional instructions — Send the whole bundle as one request\n/cancel — Discard the unsent bundle\n/help — Help\n\nForwarded messages, files and images are collected in a bundle. Direct text is added while a bundle is open. Send it with /send command. Original images are sent to Codex with the request. Each file may be up to 20 MB.\n\nAfter selecting a chat, direct messages without an open bundle are sent to that chat. While work is running, ordinary messages wait in a persistent FIFO queue until completion. /queue shows waiting requests; /steer sends immediate guidance to the current task. Closed chats are opened in Codex when selected.`;
 // Desktop 26.1002 reads restoreMessage.cwd/context before dispatching turn/steer.
 // Match its plain-text follow-up shape, including the shared message identity.
 export function steeringParams(w, input) {
@@ -74,7 +76,7 @@ export class Bridge {
     }
     if (epoch !== this.selectionEpoch) return;
     if (!this.watched.has(row.id) && this.watched.size >= 8) {
-      const candidate = [...this.watched.values()].find(w => lastTurn(w.state)?.status !== 'inProgress');
+      const candidate = [...this.watched.values()].find(w => !isBusy(w) && !this.outbox?.has(w.id));
       if (!candidate) throw Error('Eight chats are being followed; finish one before adding another.');
       if (candidate.owner) this.ipc.follow(candidate.id, candidate.owner, false);
       this.watched.delete(candidate.id);
@@ -93,6 +95,20 @@ export class Bridge {
     this.selected = w;
     this.onSelected?.(row);
     if (notify) await this.tg.send(this.chatId, card('✅ Chat selected', concatRich(styled(row.title || 'Codex'), '\n\n📁 Project: ', w.state.cwd || 'No project', '\n🧠 Model: ', w.state.latestModel || 'Default'), 'Your next message goes to this chat.'), chatKeyboard(w.id));
+  }
+  async watchQueued(row) {
+    if (this.watched.has(row.id)) return;
+    if (this.watched.size >= 8) {
+      const candidate = [...this.watched.values()].find(w => w.id !== this.selected?.id && !isBusy(w) && !this.outbox?.has(w.id));
+      if (!candidate) throw Error('Live chat capacity reached');
+      if (candidate.owner) await this.ipc.follow(candidate.id, candidate.owner, false);
+      this.watched.delete(candidate.id);
+    }
+    const owner = await this.ipc.owner(row.id);
+    const w = { id: row.id, title: row.title, owner, synced: false, revision: null, state: null,
+      messages: new Map(), sentRequests: new Set(), seenTurns: new Set() };
+    this.watched.set(row.id, w);
+    try { await this.ipc.follow(row.id, owner); } catch (error) { w.owner = null; throw error; }
   }
   waitSnapshot(w) {
     return new Promise((resolve, reject) => {
@@ -155,8 +171,9 @@ export class Bridge {
       if (command === 'answer') return this.answer(arg);
       throw Error('Unknown command. /help');
     }
-    await this.sendInput([{ type: 'text', text }]);
-    return this.tg.send(this.chatId, card('📨 Message sent', `Codex in chat «${this.selected.title || 'Chat'}» received your request.`), chatKeyboard(this.selected.id));
+    const result = await this.sendInput([{ type: 'text', text }]);
+    if (result.queued) return this.outbox.notice(this, result.entry);
+    return this.tg.send(this.chatId, card('📨 Message sent', `Codex in chat «${result.title || 'Chat'}» received your request.`), chatKeyboard(result.id));
   }
   readyToSend(expectedThreadId) {
     const w = this.requireSelected();
@@ -164,7 +181,23 @@ export class Bridge {
     if (lastTurn(w.state)?.status === 'inProgress' || w.state.threadRuntimeStatus?.type === 'active') throw Error('Codex is working; to guide the active task use /steer followed by your instructions.');
     return w;
   }
+  readyToSubmit(expectedThreadId) {
+    const w = this.requireSelected();
+    if (expectedThreadId && w.id !== expectedThreadId) throw Error('This bundle belongs to another chat; select that chat again or use /cancel to discard the bundle.');
+    if (!this.outbox) return this.readyToSend(expectedThreadId);
+    return w;
+  }
   async sendInput(input, expectedThreadId, clientUserMessageId = randomUUID()) {
+    if (this.outbox) {
+      let w, entry;
+      try { w = this.readyToSubmit(expectedThreadId); entry = this.outbox.enqueue(w, input, clientUserMessageId); }
+      catch (error) { error.notDispatched = true; throw error; }
+      await this.outbox.flush(this, w.id);
+      if (entry.status === 'uncertain') throw Error(OUTBOX.uncertainError);
+      const queued = entry.status === 'queued' || entry.status === 'dispatching';
+      if (queued) { entry.notifyOnDispatch = true; this.outbox.save(); }
+      return { ...w, queued, entry };
+    }
     const w = this.readyToSend(expectedThreadId);
     const request = { threadId: w.id, input, clientUserMessageId };
     await this.ipc.request('thread-follower-start-turn', { conversationId: w.id, turnStart: { request, context: { inheritThreadSettings: true } } }, w.owner, 60000);
