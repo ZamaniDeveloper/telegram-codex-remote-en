@@ -18,14 +18,14 @@ export class Telegram {
     if (!body.ok) {
       if (body.description?.includes('message is not modified')) return null;
       const e = Error(`Telegram ${body.error_code}: ${(body.description || 'request failed').replaceAll(this.token, '[redacted]')}`);
-      e.retryAfter = body.parameters?.retry_after; throw e;
+      e.errorCode = body.error_code; e.retryAfter = body.parameters?.retry_after; throw e;
     }
     return body.result;
   }
   async send(chatId, text, replyMarkup) {
     let result;
     const parts = splitRich(text);
-    for (let i = 0; i < parts.length; i++) result = await this.call('sendMessage', {
+    for (let i = 0; i < parts.length; i++) result = await this.deliver('sendMessage', {
       chat_id: chatId, text: parts[i].text, entities: parts[i].entities, link_preview_options: { is_disabled: true },
       ...(i === parts.length - 1 && replyMarkup ? { reply_markup: replyMarkup } : {}),
     });
@@ -33,9 +33,10 @@ export class Telegram {
   }
   edit(chatId, messageId, value, replyMarkup) {
     const { text, entities } = asRich(value);
-    return this.call('editMessageText', { chat_id: chatId, message_id: messageId, text, entities,
+    return this.deliver('editMessageText', { chat_id: chatId, message_id: messageId, text, entities,
       link_preview_options: { is_disabled: true }, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) });
   }
+  deliver(method, params) { return this.premium ? this.premium.deliver(method, params) : this.call(method, params); }
   pin(chatId, messageId) {
     return this.call('pinChatMessage', { chat_id: chatId, message_id: messageId, disable_notification: true });
   }
