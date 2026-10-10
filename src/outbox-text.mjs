@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Mohsen Zamani / ZamaniDeveloper. See LICENSE.
 export const text = {
+  chatCount: '⏳ Waiting messages in this chat', totalCount: '📬 Waiting messages in all queues',
   title: '⏳ Send queue', queued: '⏳ Message queued', waiting: 'It will be sent to this conversation in order after the current task finishes.',
   sent: '📨 Queued message sent', empty: 'The send queue is empty.', cancel: '🗑 Remove from queue', cancelled: 'Message removed from the queue.',
   uncertain: '⚠️ Delivery is uncertain. This conversation queue is paused; check Codex first. The message will not be resent automatically.',

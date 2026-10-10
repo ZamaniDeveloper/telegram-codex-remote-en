@@ -56,6 +56,7 @@ export class BotUi {
       styled('💬 Active chat: '), w?.title || 'Not selected yet', '\n',
       styled('🔗 Connection: '), w?.synced ? 'Connected to Codex' : 'Select a chat using the «Chats» button', '\n',
       styled('📦 Group message sending: '), this.inbox.current ? `${this.inbox.current.items.length} messages ready` : 'No bundle is open',
+      '\n⏳ Waiting messages in all queues: ', String(this.bridge.outbox?.count() || 0),
       '\n\nSend messages and attachments; replies and questions from Codex appear here.');
     return this.tg.send(this.chatId, card('🤖 TeleCodex main menu', body, 'Choose an action using the buttons attached to this message.'), mainInlineKeyboard());
   }
