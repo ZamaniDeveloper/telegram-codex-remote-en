@@ -9,7 +9,7 @@ import { text as T } from './feature-text.mjs';
 import { AccountUi } from './account-ui.mjs';
 import { PremiumUi } from './premium-ui.mjs';
 
-export const UI_REVISION = 10;
+export const UI_REVISION = 11;
 export const UI_EDITION = 'en';
 export const LABELS = {
   chats: '💬 Chats', search: '🔎 Search', status: '📊 Status', history: '🗂 Recent replies',
@@ -23,8 +23,9 @@ export function mainKeyboard() {
   return { keyboard: [[LABELS.chats, LABELS.search], ...featureRows(), [LABELS.status, LABELS.history], [LABELS.bundle, LABELS.questions], [LABELS.usage, LABELS.accounts], [LABELS.queue, LABELS.help], [LABELS.premium, LABELS.home]].map(row => row.map(text => ({ text }))),
     resize_keyboard: true, is_persistent: true, input_field_placeholder: 'Write a message or use the buttons' };
 }
-export function mainInlineKeyboard() {
+export function mainInlineKeyboard(miniappUrl) {
   return { inline_keyboard: [
+    ...(miniappUrl ? [[{ text: '📱 Graphical panel', web_app: { url: miniappUrl }, style: 'primary' }]] : []),
     [button(LABELS.chats, 'u:chats', 'primary'), button(LABELS.search, 'u:search')],
     ...featureMenuRows(),
     [button(LABELS.status, 'u:status'), button(LABELS.history, 'u:history')],
@@ -58,7 +59,7 @@ export class BotUi {
       styled('📦 Group message sending: '), this.inbox.current ? `${this.inbox.current.items.length} messages ready` : 'No bundle is open',
       '\n⏳ Waiting messages in all queues: ', String(this.bridge.outbox?.count() || 0),
       '\n\nSend messages and attachments; replies and questions from Codex appear here.');
-    return this.tg.send(this.chatId, card('🤖 TeleCodex main menu', body, 'Choose an action using the buttons attached to this message.'), mainInlineKeyboard());
+    return this.tg.send(this.chatId, card('🤖 TeleCodex main menu', body, 'Choose an action using the buttons attached to this message.'), mainInlineKeyboard(this.miniappUrl));
   }
   async help() {
     return this.tg.send(this.chatId, card('✨ Bot guide', concatRich(
