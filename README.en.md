@@ -13,3 +13,5 @@ The main menu (`/menu`, Home and back buttons) attaches all navigation buttons d
 ## Accounts from Telegram (0.8.1)
 
 Use Accounts or `/accounts` to add a ChatGPT login on your phone and manually switch the Windows account while retaining local projects. Update both components. See [account setup and recovery](docs/ACCOUNTS.en.md).
+
+Closed Codex is reopened automatically while the Windows connector is running. Windows must remain awake, online and logged in. See [automatic desktop recovery](docs/INSTALL.en.md#automatic-desktop-recovery-082) for controls and SSH keepalives.
