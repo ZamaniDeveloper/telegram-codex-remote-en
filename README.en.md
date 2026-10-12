@@ -31,3 +31,8 @@ The Codex status card shows waiting request counts for the selected chat and all
 ### Graphical panel inside Telegram
 
 An optional Mini App provides a live dashboard, searchable conversations, projects, queue controls and reported code diffs. Activate a chat, continue it, create a chat in an existing project, or guide/stop its current task. Configure an HTTPS URL and a loopback reverse proxy; see [Mini App setup and security](docs/MINIAPP.en.md). Owner-only Telegram authentication and durable mutation deduplication protect existing desktop sessions.
+
+## Connection reliability update (0.10.0)
+
+The existing desktop owner remains in control. Compact deltas, sequenced event replay, persistent command receipts, independent maintenance lanes and Telegram delivery checkpoints improve recovery without replaying uncertain actions. Update both the bot and Windows connector together. See [reliability and upgrade details](docs/RELIABILITY.en.md).
+
