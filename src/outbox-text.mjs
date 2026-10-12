@@ -1,5 +1,9 @@
 // Copyright (c) 2026 Mohsen Zamani / ZamaniDeveloper. See LICENSE.
 export const text = {
+  refresh:'Refresh status and queue', confirmFinished:'This task ended; continue queue',
+  needsReview:'Codex is idle, but completion identity for this legacy request was not found. Confirm only after verifying that it finished or was cancelled.',
+  confirmReview:'Your confirmation retires this legacy wait record and permits the next queued request. It does not resend or stop the old request. Confirm only if the task finished or was cancelled.',
+  recovered:'You confirmed the legacy task ended; the queue will be checked.', busyRecovery:'Codex is active or fresh state is unavailable; refresh the queue again.',
   chatCount: '⏳ Waiting messages in this chat', totalCount: '📬 Waiting messages in all queues',
   title: '⏳ Send queue', queued: '⏳ Message queued', waiting: 'It will be sent to this conversation in order after the current task finishes.',
   sent: '📨 Queued message sent', empty: 'The send queue is empty.', cancel: '🗑 Remove from queue', cancelled: 'Message removed from the queue.',
